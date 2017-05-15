@@ -1,8 +1,11 @@
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
@@ -12,7 +15,12 @@ public class Markov {
 
 	// Hashmap
 	private static Hashtable<String, Vector<String>> markovChain = new Hashtable<String, Vector<String>>();
-	static Random rnd = new Random();
+    private static Hashtable<String, Vector<String>> markovChainQuestions = new Hashtable<String, Vector<String>>();
+    private static Hashtable<String, Vector<String>> markovChainAnswers = new Hashtable<String, Vector<String>>();
+    private static List <String> latinQuestion = new ArrayList<>();
+    private static List <String> latinAnswer = new ArrayList<>();
+
+    static Random rnd = new Random();
 	private static int numSentencesInput;
    // private static String regEx = "(?s).*\\b1\\b.*\\b2\\b.*\\b3\\b.*\\b4\\b.*\\b5\\b.*\\b6\\b.*\\b7\\b.*\\b8\\b.*\\b9\\b.*\\b0\\b.*";
     private static String regEx = "([0-9])";
@@ -22,15 +30,28 @@ public class Markov {
 	public static void main(String[] args) throws IOException {
 		
 		// Create the first three entries (k:_start, k:_end, k:_one)
-		markovChain.put("_start", new Vector<String>());//words that start sentences
-		markovChain.put("_end", new Vector<String>());//words that end sentences
-        markovChain.put("_one", new Vector<String>());//one word sentences
+        //generic chain
+		markovChain.put("_start", new Vector<>());//words that start sentences
+		markovChain.put("_end", new Vector<>());//words that end sentences
+        markovChain.put("_one", new Vector<>());//one word sentences
+        markovChain.put("_questions", new Vector<>());//one word sentences
+
+        //chain that forms questions
+        markovChainQuestions.put("_start", new Vector<>());//words that start sentences
+        markovChainQuestions.put("_end", new Vector<>());//words that end sentences
+        markovChainQuestions.put("_one", new Vector<>());//one word sentences
+
+        //chain that forms answers
+        markovChainAnswers.put("_start", new Vector<>());//words that start sentences
+        markovChainAnswers.put("_end", new Vector<>());//words that end sentences
+        markovChainAnswers.put("_one", new Vector<>());//one word sentences
         numSentencesInput = 0;
 
+        //if sentence is in question
+
+        splitAndCountWords(readFile("../Rumi-Poems-2.txt"));
 
         while(true) {
-		// Get some words
-            System.out.println("Markov Chain > " + markovChain.toString());
             System.out.println("");
             System.out.println("Enter your phrase > ");
             BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -134,7 +155,6 @@ public class Markov {
 
 	}
 
-
 	private static String generateOneWordSentence(){
 
         // Vector to hold the phrase
@@ -171,7 +191,7 @@ public class Markov {
 		newPhrase.add(nextWord);
         Vector<String> wordSelection;
         // Keep looping through the words until we've reached the end
-        System.out.println(nextWord);
+        //System.out.println(nextWord);
 		while (nextWord.length() != 0 && nextWord.charAt(nextWord.length()-1) != '.' && nextWord.charAt(nextWord.length()-1) != '?') {
             if(startWords.contains(nextWord)) {
                 wordSelection = markovChain.get(" " + nextWord);
@@ -185,7 +205,7 @@ public class Markov {
             }else{
                 break;
             }
-            System.out.println(nextWord);
+      //      System.out.println(nextWord);
         }
 		String sentence = "";
 
@@ -194,5 +214,24 @@ public class Markov {
         }
 		return sentence;
 	}
+
+
+	private static String readFile (String filename) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+        try {
+            StringBuilder sb = new StringBuilder();
+            String line = br.readLine();
+
+            while (line != null) {
+                sb.append(line);
+                sb.append("\n");
+                line = br.readLine();
+            }
+            return sb.toString();
+        } finally {
+            br.close();
+        }
+
+    }
 
 }
