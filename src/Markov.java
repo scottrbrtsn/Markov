@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -19,6 +20,10 @@ public class Markov {
     private static Hashtable<String, Vector<String>> markovChainAnswers = new Hashtable<String, Vector<String>>();
     private static List <String> latinQuestion = new ArrayList<>();
     private static List <String> latinAnswer = new ArrayList<>();
+    private static Hashtable<String, Vector<String>> questionAndAnswers = new Hashtable<>();
+
+    //how to keep track of state of conversation.
+
 
     static Random rnd = new Random();
 	private static int numSentencesInput;
@@ -37,19 +42,20 @@ public class Markov {
         markovChain.put("_questions", new Vector<>());//one word sentences
 
         //chain that forms questions
-        markovChainQuestions.put("_start", new Vector<>());//words that start sentences
-        markovChainQuestions.put("_end", new Vector<>());//words that end sentences
-        markovChainQuestions.put("_one", new Vector<>());//one word sentences
+        markovChainQuestions.put("_start", new Vector<>());//words that start questions
+        markovChainQuestions.put("_end", new Vector<>());//words that end questions
+        markovChainQuestions.put("_one", new Vector<>());//one word questions
 
         //chain that forms answers
-        markovChainAnswers.put("_start", new Vector<>());//words that start sentences
-        markovChainAnswers.put("_end", new Vector<>());//words that end sentences
-        markovChainAnswers.put("_one", new Vector<>());//one word sentences
+        markovChainAnswers.put("_start", new Vector<>());//words that start answers
+        markovChainAnswers.put("_end", new Vector<>());//words that end answers
+        markovChainAnswers.put("_one", new Vector<>());//one word answers
         numSentencesInput = 0;
 
         //if sentence is in question
-
-        splitAndCountWords(readFile("../Rumi-Poems-2.txt"));
+        //upload and parse dictionary
+        uploadDictionary("../dictionary.txt");
+        splitAndRespond(readFile("../Rumi-Poems-2.txt"));
 
         while(true) {
             System.out.println("");
@@ -60,7 +66,7 @@ public class Markov {
             System.out.println("");
 
 		// Add the words to the hash table and print answer
-            System.out.println(splitAndCountWords(sInput));
+            System.out.println(splitAndRespond(sInput));
 		}
 		
 	}
@@ -68,19 +74,18 @@ public class Markov {
 	/*
 	 * Add words
 	 */
-	private static String splitAndCountWords(String phrase) {
+	private static String splitAndRespond(String phrase) {
 		// put each word into an array
 		String[] words = phrase.split(" ");
         String response;
 		if(words.length == 1){
             addWordToMarkovCollection(words[0]);
 			response = generateOneWordSentence();
-		}else{
-            // Loop through each word, check if it's already added
-            // if its added, then get the suffix vector and add the word
-            // if it hasn't been added then add the word to the list
-            // if its the first or last word then select the _start / _end key
-            // then generate the next sentence
+		}else if(latinQuestion.contains(phrase)){//I've heard this question before
+            addWordsToMarkovCollection(words);
+            Vector<String> pair = questionAndAnswers.get(phrase);
+            response = pair.get(rnd.nextInt(pair.size()));
+        }else{//create a random response
             addWordsToMarkovCollection(words);
             response = generateSentence();
             for (int i = 0; i < numSentencesInput/2; i ++){
@@ -90,7 +95,6 @@ public class Markov {
                    response = response + " " + generateSentence();
                }
            }
-
 		}
 		return response;
 	}
@@ -101,7 +105,11 @@ public class Markov {
     }
 
 	private static void addWordsToMarkovCollection(String[] words){
-
+        // Loop through each word, check if it's already added
+        // if its added, then get the suffix vector and add the word
+        // if it hasn't been added then add the word to the list
+        // if its the first or last word then select the _start / _end key
+        // then generate the next sentence
 		// Add the start and end words to their own
         for (int i=0; i<words.length; i++) {
             //first word of input
@@ -231,7 +239,39 @@ public class Markov {
         } finally {
             br.close();
         }
+    }
 
+    private static void uploadDictionary (String filename) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+        try {
+            String line = br.readLine();
+
+            while (line != null) {
+                if(!line.contains("***") && isUpperCase(line)) {//this is a word, first line
+
+                }else if(false){//secondLine
+                    //parse part of speech
+                }else if(line.contains("Defn")){
+                    //parse definition
+                }
+
+                line = br.readLine();//read next line
+
+            }
+        } finally {
+            br.close();
+        }
+    }
+
+    public static boolean isUpperCase(String s)
+    {
+        for (int i=0; i<s.length(); i++) {
+            if (!Character.isUpperCase(s.charAt(i)))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
 }
