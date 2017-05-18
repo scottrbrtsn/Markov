@@ -21,40 +21,29 @@ public class Markov {
     private static List <String> latinQuestion = new ArrayList<>();
     private static List <String> latinAnswer = new ArrayList<>();
     private static Hashtable<String, Vector<String>> questionAndAnswers = new Hashtable<>();
+    private static Hashtable<String, Vector<String>> thesaurus = new Hashtable<String, Vector<String>>();
+
 
     //how to keep track of state of conversation.
 
 
     static Random rnd = new Random();
 	private static int numSentencesInput;
-   // private static String regEx = "(?s).*\\b1\\b.*\\b2\\b.*\\b3\\b.*\\b4\\b.*\\b5\\b.*\\b6\\b.*\\b7\\b.*\\b8\\b.*\\b9\\b.*\\b0\\b.*";
-    private static String regEx = "([0-9])";
+   // private static String numRegEx = "(?s).*\\b1\\b.*\\b2\\b.*\\b3\\b.*\\b4\\b.*\\b5\\b.*\\b6\\b.*\\b7\\b.*\\b8\\b.*\\b9\\b.*\\b0\\b.*";
+    private static String numRegEx = "([0-9])";
 	/*
 	 * Main constructor
 	 */
 	public static void main(String[] args) throws IOException {
-		
-		// Create the first three entries (k:_start, k:_end, k:_one)
-        //generic chain
-		markovChain.put("_start", new Vector<>());//words that start sentences
-		markovChain.put("_end", new Vector<>());//words that end sentences
-        markovChain.put("_one", new Vector<>());//one word sentences
-        markovChain.put("_questions", new Vector<>());//one word sentences
-
-        //chain that forms questions
-        markovChainQuestions.put("_start", new Vector<>());//words that start questions
-        markovChainQuestions.put("_end", new Vector<>());//words that end questions
-        markovChainQuestions.put("_one", new Vector<>());//one word questions
-
-        //chain that forms answers
-        markovChainAnswers.put("_start", new Vector<>());//words that start answers
-        markovChainAnswers.put("_end", new Vector<>());//words that end answers
-        markovChainAnswers.put("_one", new Vector<>());//one word answers
-        numSentencesInput = 0;
+        setup();
 
         //if sentence is in question
+
         //upload and parse dictionary
-        uploadDictionary("../dictionary.txt");
+        //uploadDictionary("../dictionary.txt");
+
+        //uploadThesaurus("../thesaurus.txt");
+
         splitAndRespond(readFile("../Rumi-Poems-2.txt"));
 
         while(true) {
@@ -70,7 +59,27 @@ public class Markov {
 		}
 		
 	}
-	
+
+	private static void setup () {
+        // Create the first three entries (k:_start, k:_end, k:_one)
+        //generic chain
+        markovChain.put("_start", new Vector<>());//words that start sentences
+        markovChain.put("_end", new Vector<>());//words that end sentences
+        markovChain.put("_one", new Vector<>());//one word sentences
+        markovChain.put("_questions", new Vector<>());//one word sentences
+
+        //chain that forms questions
+        markovChainQuestions.put("_start", new Vector<>());//words that start questions
+        markovChainQuestions.put("_end", new Vector<>());//words that end questions
+        markovChainQuestions.put("_one", new Vector<>());//one word questions
+
+        //chain that forms answers
+        markovChainAnswers.put("_start", new Vector<>());//words that start answers
+        markovChainAnswers.put("_end", new Vector<>());//words that end answers
+        markovChainAnswers.put("_one", new Vector<>());//one word answers
+        numSentencesInput = 0;
+    }
+
 	/*
 	 * Add words
 	 */
@@ -121,7 +130,7 @@ public class Markov {
                 if (suffix == null) {
                     suffix = new Vector<>();
                     suffix.add(" " + words[i + 1]);
-                    if(!words[i].matches(regEx) && !words[i+1].matches(regEx)) {
+                    if(!words[i].matches(numRegEx) && !words[i+1].matches(numRegEx)) {
                         markovChain.put(" " + words[i], suffix);
                     }
                 }
@@ -140,12 +149,12 @@ public class Markov {
                 if (suffix == null) {
                     suffix = new Vector<>();
                     suffix.add(" " + words[i + 1]);
-                    if(!words[i].matches(regEx) && !words[i+1].matches(regEx)) {
+                    if(!words[i].matches(numRegEx) && !words[i+1].matches(numRegEx)) {
                         markovChain.put(" " + words[i], suffix);
                     }
                 } else {
                     suffix.add(" " + words[i + 1]);
-                    if(!words[i].matches(regEx) && !words[i+1].matches(regEx)) {
+                    if(!words[i].matches(numRegEx) && !words[i+1].matches(numRegEx)) {
                         markovChain.put(" " + words[i], suffix);
                     }
                 }
@@ -194,7 +203,7 @@ public class Markov {
         Vector<String> startWords = markovChain.get("_start");
 		int startWordsLen = startWords.size();
         int weight = (int)Instant.now().toEpochMilli();
-        nextWord = startWords.get(rnd.nextInt(startWordsLen) % ((int)Instant.now().toEpochMilli()));//could be improved
+        nextWord = startWords.get(rnd.nextInt(startWordsLen) % weight);//could be improved
 
 		newPhrase.add(nextWord);
         Vector<String> wordSelection;
@@ -208,7 +217,7 @@ public class Markov {
             }
             if(wordSelection!=null) {
                 int wordSelectionLen = wordSelection.size();
-                nextWord = wordSelection.get(rnd.nextInt(wordSelectionLen));
+                nextWord = wordSelection.get(rnd.nextInt(wordSelectionLen) % weight);
                 newPhrase.add(nextWord);
             }else{
                 break;
@@ -241,6 +250,52 @@ public class Markov {
         }
     }
 
+
+
+    //check Thesaurus logic
+    private static void uploadThesaurus (String filename) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+        try {
+            String line = br.readLine();
+
+            //skip intro
+
+            //find first word = "A" or "A
+
+            do{
+               line = readNextSynonymSet(br);
+            }
+            while (!line.contains("zymotic"));//last word
+
+        } finally {
+            br.close();
+        }
+    }
+
+    private static String readNextSynonymSet(BufferedReader br) throws IOException {
+        String line = br.readLine();
+        if(!line.contains(numRegEx)){//key
+            //key =
+        }else{//values
+            while(!line.contains(numRegEx)){
+                //log values
+                //remove numRegEx
+                //split by " " and take the words not numbers
+                //remove any ,
+                line = br.readLine();//read next line
+            }//values
+        }
+        return line;
+    }
+
+
+
+
+
+
+
+
+
     private static void uploadDictionary (String filename) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(filename));
         try {
@@ -251,8 +306,10 @@ public class Markov {
 
                 }else if(false){//secondLine
                     //parse part of speech
-                }else if(line.contains("Defn")){
+                }else if(line.contains("Defn")){//word definition
                     //parse definition
+                }else if(line.contains(numRegEx)){
+
                 }
 
                 line = br.readLine();//read next line
