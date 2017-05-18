@@ -97,13 +97,7 @@ public class Markov {
         }else{//create a random response
             addWordsToMarkovCollection(words);
             response = generateSentence();
-            for (int i = 0; i < numSentencesInput/2; i ++){
-               if (i == 0){
 
-               }else{
-                   response = response + " " + generateSentence();
-               }
-           }
 		}
 		return response;
 	}
