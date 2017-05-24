@@ -1,9 +1,7 @@
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -21,14 +19,13 @@ public class Markov {
     private static List <String> latinQuestion = new ArrayList<>();
     private static List <String> latinAnswer = new ArrayList<>();
     private static Hashtable<String, Vector<String>> questionAndAnswers = new Hashtable<>();
-    private static Hashtable<String, Vector<String>> thesaurus = new Hashtable<String, Vector<String>>();
+    private static List <String> commonWords = new ArrayList<>();
 
 
     //how to keep track of state of conversation.
 
-
+    private static int startWordsLen;
     static Random rnd = new Random();
-	private static int numSentencesInput;
    // private static String numRegEx = "(?s).*\\b1\\b.*\\b2\\b.*\\b3\\b.*\\b4\\b.*\\b5\\b.*\\b6\\b.*\\b7\\b.*\\b8\\b.*\\b9\\b.*\\b0\\b.*";
     private static String numRegEx = "([0-9])";
 	/*
@@ -39,13 +36,10 @@ public class Markov {
 
         //if sentence is in question
 
-        //upload and parse dictionary
-        //uploadDictionary("../dictionary.txt");
+        addWordsToMarkovCollection(readFile("../Oscar_Wilde.txt").split(" "));
+        addWordsToMarkovCollection(readFile("../Shakespeare.txt").split(" "));
 
-        //uploadThesaurus("../thesaurus.txt");
-
-        splitAndRespond(readFile("../Rumi-Poems-2.txt"));
-
+        System.out.println(markovChain.toString());
         while(true) {
             System.out.println("");
             System.out.println("Enter your phrase > ");
@@ -77,7 +71,24 @@ public class Markov {
         markovChainAnswers.put("_start", new Vector<>());//words that start answers
         markovChainAnswers.put("_end", new Vector<>());//words that end answers
         markovChainAnswers.put("_one", new Vector<>());//one word answers
-        numSentencesInput = 0;
+
+        commonWords.add("the");
+        commonWords.add("a");
+        commonWords.add("I");
+        commonWords.add("he");
+        commonWords.add("she");
+        commonWords.add("it");
+        commonWords.add("at");
+        commonWords.add("on");
+        commonWords.add("in");
+        commonWords.add("of");
+        commonWords.add("what");
+        commonWords.add("do");
+        commonWords.add("you");
+        commonWords.add("how");
+        commonWords.add("are");
+        commonWords.add("is");
+
     }
 
 	/*
@@ -86,23 +97,23 @@ public class Markov {
 	private static String splitAndRespond(String phrase) {
 		// put each word into an array
 		String[] words = phrase.split(" ");
+        startWordsLen = words.length;
         String response;
 		if(words.length == 1){
-            addWordToMarkovCollection(words[0]);
+            addSingleWordToMarkovCollection(words[0]);
 			response = generateOneWordSentence();
 		}else if(latinQuestion.contains(phrase)){//I've heard this question before
-            addWordsToMarkovCollection(words);
+            //addWordsToMarkovCollection(words);  only if I want to keep a log of what people enter
             Vector<String> pair = questionAndAnswers.get(phrase);
             response = pair.get(rnd.nextInt(pair.size()));
         }else{//create a random response
-            addWordsToMarkovCollection(words);
-            response = generateSentence();
-
+            //addWordsToMarkovCollection(words);  only if I want to keep a log of what people enter
+            response = generateSentence(pickKeywordToStartResponse(words));
 		}
 		return response;
 	}
 
-	private static void addWordToMarkovCollection (String word){
+	private static void addSingleWordToMarkovCollection(String word){
         Vector<String> oneWords = markovChain.get("_one");
         oneWords.add(word);
     }
@@ -118,14 +129,17 @@ public class Markov {
             //first word of input
             if (i == 0) {
                 Vector<String> startWords = markovChain.get("_start");
-                startWords.add(words[i]);
+                if(!startWords.isEmpty()
+                && !startWords.contains(words[i])) {
+                    startWords.add(words[i].replace(" ", ""));
+                }
 
                 Vector<String> suffix = markovChain.get(words[i]);
                 if (suffix == null) {
                     suffix = new Vector<>();
-                    suffix.add(" " + words[i + 1]);
+                    suffix.add(" " + words[i + 1].replace("/n", " ").replace(",", " "));
                     if(!words[i].matches(numRegEx) && !words[i+1].matches(numRegEx)) {
-                        markovChain.put(" " + words[i], suffix);
+                        markovChain.put(" " + words[i].replace("/n", " ").replace(",", " ").toLowerCase(), suffix);
                     }
                 }
             //last word of input
@@ -144,18 +158,17 @@ public class Markov {
                     suffix = new Vector<>();
                     suffix.add(" " + words[i + 1]);
                     if(!words[i].matches(numRegEx) && !words[i+1].matches(numRegEx)) {
-                        markovChain.put(" " + words[i], suffix);
+                        markovChain.put(" " + words[i].replace("/n", " ").replace(",", " "), suffix);
                     }
                 } else {
                     suffix.add(" " + words[i + 1]);
                     if(!words[i].matches(numRegEx) && !words[i+1].matches(numRegEx)) {
-                        markovChain.put(" " + words[i], suffix);
+                        markovChain.put(" " + words[i].replace("/n", " ").replace(",", " "), suffix);
                     }
                 }
                 if (words[i].contains(".") ||//input had more than one sentence
                         words[i].contains("?") ||
                         words[i].contains("!")){
-                    numSentencesInput ++;
                     Vector<String> endWords = markovChain.get("_end");
                     endWords.add(" " + words[i]);
                     Vector<String> startWords = markovChain.get("_start");
@@ -166,7 +179,88 @@ public class Markov {
 
 	}
 
-	private static String generateOneWordSentence(){
+	/*
+	 * Generate a markov phrase
+	 */
+	private static String generateSentence(String startWord) {
+
+		// Vector to hold the phrase
+		Vector<String> newPhrase = new Vector<String>();
+        newPhrase.add(startWord);
+
+        // String for the next word
+		String nextWord = " " + startWord.toLowerCase();
+        Vector<String> wordSelection;
+        // Keep looping through the words until we've reached the end
+		while (nextWord.length() != 0
+                && nextWord.charAt(nextWord.length()-1) != '.'
+                && nextWord.charAt(nextWord.length()-1) != '?'
+                && nextWord.charAt(nextWord.length()-1) != '!') {
+                wordSelection = markovChain.get(nextWord);
+            if(wordSelection!=null
+                    && !nextWord.contains(".")
+                    && !nextWord.contains("!")
+                    && !nextWord.contains("?")) {
+                nextWord = wordSelection.get(rnd.nextInt(wordSelection.size()));
+//                        % (int) Instant.now().toEpochMilli());
+                    newPhrase.add(nextWord);
+            }else{
+                break;
+            }
+        }
+		String sentence = "";
+
+        for (int i = 0; i < newPhrase.size(); i ++){
+            sentence = sentence + newPhrase.get(i);
+        }
+		return sentence;
+	}
+
+    private static String pickKeywordToStartResponse (String [] input){
+        String startWord = "";
+        Vector <String> toCheck;
+        for (String s : input){
+            toCheck = markovChain.get(" " + s.toLowerCase().replace("?", ""));
+            if(commonWords.contains(s.toLowerCase())){
+                continue;
+            }else if (toCheck != null){
+                startWord = s;
+                break;
+            }else{
+                startWord = input[0];
+            }
+
+        }
+
+        return toStartWord(startWord);
+    }
+
+    private static String toStartWord(String s){
+        char [] sArray = s.toCharArray();
+        sArray[0] = Character.toUpperCase(sArray[0]);
+        return String.valueOf(sArray);
+    }
+
+
+	private static String readFile (String filename) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+        try {
+            StringBuilder sb = new StringBuilder();
+            String line = br.readLine();
+
+            while (line != null) {
+                sb.append(line + " ");
+                line = br.readLine();
+            }
+            return sb.toString();
+        } finally {
+            br.close();
+        }
+    }
+
+
+
+    private static String generateOneWordSentence(){
 
         // Vector to hold the phrase
         Vector<String> newPhrase = new Vector<String>();
@@ -181,148 +275,6 @@ public class Markov {
         newPhrase.add(word);
 
         return newPhrase.get(0);
-    }
-
-	/*
-	 * Generate a markov phrase
-	 */
-	private static String generateSentence() {
-		// Vector to hold the phrase
-		Vector<String> newPhrase = new Vector<String>();
-		
-		// String for the next word
-		String nextWord = "";
-				
-		// Select the first word
-        Vector<String> startWords = markovChain.get("_start");
-		int startWordsLen = startWords.size();
-        int weight = (int)Instant.now().toEpochMilli();
-        nextWord = startWords.get(rnd.nextInt(startWordsLen) % weight);//could be improved
-
-		newPhrase.add(nextWord);
-        Vector<String> wordSelection;
-        // Keep looping through the words until we've reached the end
-        //System.out.println(nextWord);
-		while (nextWord.length() != 0 && nextWord.charAt(nextWord.length()-1) != '.' && nextWord.charAt(nextWord.length()-1) != '?') {
-            if(startWords.contains(nextWord)) {
-                wordSelection = markovChain.get(" " + nextWord);
-            }else{
-                wordSelection = markovChain.get(nextWord);
-            }
-            if(wordSelection!=null) {
-                int wordSelectionLen = wordSelection.size();
-                nextWord = wordSelection.get(rnd.nextInt(wordSelectionLen) % weight);
-                newPhrase.add(nextWord);
-            }else{
-                break;
-            }
-      //      System.out.println(nextWord);
-        }
-		String sentence = "";
-
-        for (int i = 0; i < newPhrase.size(); i ++){
-            sentence = sentence + newPhrase.get(i);
-        }
-		return sentence;
-	}
-
-
-	private static String readFile (String filename) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(filename));
-        try {
-            StringBuilder sb = new StringBuilder();
-            String line = br.readLine();
-
-            while (line != null) {
-                sb.append(line);
-                sb.append("\n");
-                line = br.readLine();
-            }
-            return sb.toString();
-        } finally {
-            br.close();
-        }
-    }
-
-
-
-    //check Thesaurus logic
-    private static void uploadThesaurus (String filename) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(filename));
-        try {
-            String line = br.readLine();
-
-            //skip intro
-
-            //find first word = "A" or "A
-
-            do{
-               line = readNextSynonymSet(br);
-            }
-            while (!line.contains("zymotic"));//last word
-
-        } finally {
-            br.close();
-        }
-    }
-
-    private static String readNextSynonymSet(BufferedReader br) throws IOException {
-        String line = br.readLine();
-        if(!line.contains(numRegEx)){//key
-            //key =
-        }else{//values
-            while(!line.contains(numRegEx)){
-                //log values
-                //remove numRegEx
-                //split by " " and take the words not numbers
-                //remove any ,
-                line = br.readLine();//read next line
-            }//values
-        }
-        return line;
-    }
-
-
-
-
-
-
-
-
-
-    private static void uploadDictionary (String filename) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(filename));
-        try {
-            String line = br.readLine();
-
-            while (line != null) {
-                if(!line.contains("***") && isUpperCase(line)) {//this is a word, first line
-
-                }else if(false){//secondLine
-                    //parse part of speech
-                }else if(line.contains("Defn")){//word definition
-                    //parse definition
-                }else if(line.contains(numRegEx)){
-
-                }
-
-                line = br.readLine();//read next line
-
-            }
-        } finally {
-            br.close();
-        }
-    }
-
-    public static boolean isUpperCase(String s)
-    {
-        for (int i=0; i<s.length(); i++) {
-            if (!Character.isUpperCase(s.charAt(i)))
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
 }
