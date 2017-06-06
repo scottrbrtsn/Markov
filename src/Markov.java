@@ -14,11 +14,6 @@ public class Markov {
 
 	// Hashmap
 	private static Hashtable<String, Vector<String>> markovChain = new Hashtable<String, Vector<String>>();
-    private static Hashtable<String, Vector<String>> markovChainQuestions = new Hashtable<String, Vector<String>>();
-    private static Hashtable<String, Vector<String>> markovChainAnswers = new Hashtable<String, Vector<String>>();
-    private static List <String> latinQuestion = new ArrayList<>();
-    private static List <String> latinAnswer = new ArrayList<>();
-    private static Hashtable<String, Vector<String>> questionAndAnswers = new Hashtable<>();
     private static List <String> commonWords = new ArrayList<>();
 
 
@@ -38,6 +33,7 @@ public class Markov {
 
         addWordsToMarkovCollection(readFile("../Oscar_Wilde.txt").split(" "));
         addWordsToMarkovCollection(readFile("../Shakespeare.txt").split(" "));
+        addWordsToMarkovCollection(readFile("../Asimov.txt").split(" "));
 
         System.out.println(markovChain.toString());
         while(true) {
@@ -61,16 +57,6 @@ public class Markov {
         markovChain.put("_end", new Vector<>());//words that end sentences
         markovChain.put("_one", new Vector<>());//one word sentences
         markovChain.put("_questions", new Vector<>());//one word sentences
-
-        //chain that forms questions
-        markovChainQuestions.put("_start", new Vector<>());//words that start questions
-        markovChainQuestions.put("_end", new Vector<>());//words that end questions
-        markovChainQuestions.put("_one", new Vector<>());//one word questions
-
-        //chain that forms answers
-        markovChainAnswers.put("_start", new Vector<>());//words that start answers
-        markovChainAnswers.put("_end", new Vector<>());//words that end answers
-        markovChainAnswers.put("_one", new Vector<>());//one word answers
 
         commonWords.add("the");
         commonWords.add("a");
@@ -102,11 +88,7 @@ public class Markov {
 		if(words.length == 1){
             addSingleWordToMarkovCollection(words[0]);
 			response = generateOneWordSentence();
-		}else if(latinQuestion.contains(phrase)){//I've heard this question before
-            //addWordsToMarkovCollection(words);  only if I want to keep a log of what people enter
-            Vector<String> pair = questionAndAnswers.get(phrase);
-            response = pair.get(rnd.nextInt(pair.size()));
-        }else{//create a random response
+		}else{//create a random response
             //addWordsToMarkovCollection(words);  only if I want to keep a log of what people enter
             response = generateSentence(pickKeywordToStartResponse(words));
 		}
@@ -128,7 +110,7 @@ public class Markov {
         for (int i=0; i<words.length; i++) {
             //first word of input
             if (i == 0) {
-                Vector<String> startWords = markovChain.get("_start");
+                Vector<String> startWords = markovChain.get("_start");//for some reason start words have a lot more than I'd expect
                 if(!startWords.isEmpty()
                 && !startWords.contains(words[i])) {
                     startWords.add(words[i].replace(" ", ""));
