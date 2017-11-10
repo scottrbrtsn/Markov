@@ -2,3 +2,5 @@
 *.idea
 *.iml
 *.pdf
+.DS_Store
+META-INF/
